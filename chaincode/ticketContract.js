@@ -12,9 +12,12 @@ class TicketBookingContract extends Contract {
                 organizer: 'admin@eventhub.com',
                 location: 'Grand Arena',
                 date: '2026-09-15',
+                totalCapacity: 250,
+                totalIssued: 0,
+                isQuotaLocked: true,
                 tiers: {
-                    VIP: { price: 150, totalQuota: 50, issued: 0 },
-                    General: { price: 50, totalQuota: 200, issued: 0 }
+                    'VIP Tier': { price: 150, totalQuota: 50, issued: 0 },
+                    'General Tier': { price: 50, totalQuota: 200, issued: 0 }
                 }
             },
             {
@@ -24,8 +27,11 @@ class TicketBookingContract extends Contract {
                 organizer: 'curator@gallery.org',
                 location: 'City Gallery',
                 date: '2026-10-01',
+                totalCapacity: 100,
+                totalIssued: 0,
+                isQuotaLocked: true,
                 tiers: {
-                    Standard: { price: 25, totalQuota: 100, issued: 0 }
+                    'Special Tier': { price: 25, totalQuota: 100, issued: 0 }
                 }
             }
         ];
@@ -35,7 +41,7 @@ class TicketBookingContract extends Contract {
         }
     }
 
-    // Create a new event with tiers and limited quotas
+    // Create a new event with fixed quotas & flexible tier structure (Tier 1, Tier 2, Tier 3, Special Tier, etc.)
     async CreateEvent(ctx, eventId, title, category, location, date, tiersJson, organizer) {
         const allowedCategories = ['concert', 'show', 'cinema', 'exhibition', 'others'];
         if (!allowedCategories.includes(category.toLowerCase())) {
@@ -48,8 +54,19 @@ class TicketBookingContract extends Contract {
         }
 
         const tiers = JSON.parse(tiersJson);
+        let calculatedTotalCapacity = 0;
+
         for (const tierName in tiers) {
+            const quota = parseInt(tiers[tierName].totalQuota, 10);
+            if (isNaN(quota) || quota <= 0) {
+                throw new Error(`Invalid quota for tier ${tierName}`);
+            }
             tiers[tierName].issued = 0;
+            calculatedTotalCapacity += quota;
+        }
+
+        if (calculatedTotalCapacity <= 0) {
+            throw new Error('Event must have at least one ticket available in total capacity');
         }
 
         const eventData = {
@@ -59,11 +76,27 @@ class TicketBookingContract extends Contract {
             location,
             date,
             organizer,
+            totalCapacity: calculatedTotalCapacity,
+            totalIssued: 0,
+            isQuotaLocked: true, // Permanent lock once booking begins
             tiers
         };
 
         await ctx.stub.putState(eventId, Buffer.from(JSON.stringify(eventData)));
         return JSON.stringify(eventData);
+    }
+
+    // Prevent modifying ticket quotas after event booking initialization
+    async ModifyEventQuota(ctx, eventId) {
+        const eventBytes = await ctx.stub.getState(eventId);
+        if (!eventBytes || eventBytes.length === 0) {
+            throw new Error(`Event ${eventId} not found`);
+        }
+
+        const event = JSON.parse(eventBytes.toString());
+        if (event.isQuotaLocked) {
+            throw new Error('Forbidden: Ticket quotas are permanently locked before booking begins and cannot be modified');
+        }
     }
 
     // Issue a ticket to a user (requires gmail or phone number)
@@ -82,13 +115,19 @@ class TicketBookingContract extends Contract {
             throw new Error(`Tier ${tierName} does not exist for this event`);
         }
 
+        if (event.totalIssued >= event.totalCapacity) {
+            throw new Error(`Total event capacity of ${event.totalCapacity} tickets has been reached`);
+        }
+
         const tier = event.tiers[tierName];
         if (tier.issued >= tier.totalQuota) {
             throw new Error(`Ticket quota for tier ${tierName} has been exhausted`);
         }
 
-        // Update quota
+        // Increment issued count for tier and total event
         tier.issued += 1;
+        event.totalIssued += 1;
+
         await ctx.stub.putState(eventId, Buffer.from(JSON.stringify(event)));
 
         // Generate unique entry and exit hashes

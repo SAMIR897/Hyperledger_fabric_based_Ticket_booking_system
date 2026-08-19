@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initForms();
     loadEvents();
+    calculateTotalCapacity();
 });
 
 // Navigation tab switching
@@ -24,6 +25,22 @@ function initNavigation() {
     });
 
     document.getElementById('category-filter').addEventListener('change', renderEvents);
+}
+
+// Calculate total capacity live as organizer defines tier quotas
+function calculateTotalCapacity() {
+    const tierQuotas = document.querySelectorAll('.tier-quota');
+    let total = 0;
+    tierQuotas.forEach(input => {
+        const val = parseInt(input.value, 10);
+        if (!isNaN(val) && val > 0) {
+            total += val;
+        }
+    });
+    const badge = document.getElementById('calculated-capacity-badge');
+    if (badge) {
+        badge.textContent = `Total Fixed Capacity: ${total} tickets`;
+    }
 }
 
 // Initialize Event creation, booking, and scanning forms
@@ -63,8 +80,9 @@ function initForms() {
             });
             const data = await res.json();
             if (data.success) {
-                alert('Event successfully created on Fabric ledger');
+                alert('Event and fixed ticket quotas successfully published and locked on Fabric ledger');
                 document.getElementById('create-event-form').reset();
+                calculateTotalCapacity();
                 loadEvents();
                 // Switch to catalog tab
                 document.querySelector('[data-tab="catalog"]').click();
@@ -169,18 +187,20 @@ function addTierRow() {
     const div = document.createElement('div');
     div.className = 'tier-row';
     div.innerHTML = `
-        <input type="text" class="tier-name" placeholder="Tier Name (e.g. VIP)" required>
+        <input type="text" class="tier-name" placeholder="Tier Name (e.g. Tier 1, Tier 2, Special Tier)" required oninput="calculateTotalCapacity()">
         <input type="number" class="tier-price" placeholder="Price ($)" min="0" required>
-        <input type="number" class="tier-quota" placeholder="Limited Quota" min="1" required>
+        <input type="number" class="tier-quota" placeholder="Fixed Quota" min="1" required oninput="calculateTotalCapacity()">
         <button type="button" class="btn-remove-tier" onclick="removeTierRow(this)">Remove</button>
     `;
     container.appendChild(div);
+    calculateTotalCapacity();
 }
 
 function removeTierRow(btn) {
     const rows = document.querySelectorAll('.tier-row');
     if (rows.length > 1) {
         btn.parentElement.remove();
+        calculateTotalCapacity();
     } else {
         alert('At least one ticket tier is required.');
     }
@@ -231,9 +251,15 @@ function renderEvents() {
             `;
         }
 
+        const totalIssued = evt.totalIssued || 0;
+        const totalCapacity = evt.totalCapacity || 0;
+
         card.innerHTML = `
             <div>
-                <div class="event-category-tag">${evt.category}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="event-category-tag">${evt.category}</span>
+                    <span class="badge-tag">Capacity: ${totalIssued}/${totalCapacity} (Locked)</span>
+                </div>
                 <h3 class="event-title">${evt.title}</h3>
                 <div class="event-meta">
                     <p>Location: ${evt.location}</p>
@@ -243,7 +269,9 @@ function renderEvents() {
                     ${tiersHtml}
                 </div>
             </div>
-            <button class="btn-primary" onclick="openBookingModal('${evt.eventId}')">Book Ticket</button>
+            <button class="btn-primary" onclick="openBookingModal('${evt.eventId}')" ${totalIssued >= totalCapacity ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                ${totalIssued >= totalCapacity ? 'Event Sold Out' : 'Book Ticket'}
+            </button>
         `;
         grid.appendChild(card);
     });

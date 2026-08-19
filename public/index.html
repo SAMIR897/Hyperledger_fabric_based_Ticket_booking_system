@@ -48,6 +48,9 @@
         <section id="organizer-tab" class="tab-content">
             <div class="card-form">
                 <h2>Create New Event Occasion</h2>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem;">
+                    Note: Ticket capacity and tier quotas are permanently fixed on the Fabric ledger once published before booking starts.
+                </p>
                 <form id="create-event-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -78,19 +81,22 @@
                     </div>
 
                     <div class="tiers-container">
-                        <h3>Ticket Tiers & Limited Quotas</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h3>Configure Custom Ticket Tiers</h3>
+                            <span id="calculated-capacity-badge" class="badge-tag">Total Fixed Capacity: 0</span>
+                        </div>
                         <div id="tier-rows">
                             <div class="tier-row">
-                                <input type="text" class="tier-name" placeholder="Tier Name (e.g. VIP)" required>
+                                <input type="text" class="tier-name" placeholder="Tier Name (e.g. Tier 1, Tier 2, Special Tier)" required oninput="calculateTotalCapacity()">
                                 <input type="number" class="tier-price" placeholder="Price ($)" min="0" required>
-                                <input type="number" class="tier-quota" placeholder="Limited Quota" min="1" required>
+                                <input type="number" class="tier-quota" placeholder="Fixed Quota" min="1" required oninput="calculateTotalCapacity()">
                                 <button type="button" class="btn-remove-tier" onclick="removeTierRow(this)">Remove</button>
                             </div>
                         </div>
-                        <button type="button" class="btn-secondary" onclick="addTierRow()">+ Add Tier</button>
+                        <button type="button" class="btn-secondary" onclick="addTierRow()">+ Add Custom Tier</button>
                     </div>
 
-                    <button type="submit" class="btn-primary">Publish Event to Fabric Ledger</button>
+                    <button type="submit" class="btn-primary">Publish Event & Lock Fixed Quotas</button>
                 </form>
             </div>
         </section>
