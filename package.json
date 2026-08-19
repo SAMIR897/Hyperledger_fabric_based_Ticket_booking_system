@@ -1,0 +1,23 @@
+{
+  "name": "hyperledger-fabric-ticket-booking",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric based ticket booking, transfer, and QR validation system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "hyperledger-fabric",
+    "blockchain",
+    "ticket-booking",
+    "chaincode",
+    "qr-code"
+  ],
+  "author": "Samir",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "fabric-contract-api": "^2.5.2",
+    "qrcode": "^1.5.3"
+  }
+}
