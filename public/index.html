@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperledger Fabric Ticket Vault</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- QRCode CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo-container">
+            <span class="logo-badge">FABRIC LEDGER</span>
+            <h1>TicketVault Enterprise</h1>
+        </div>
+        <nav class="nav-links">
+            <button class="nav-btn active" data-tab="catalog">Event Catalog</button>
+            <button class="nav-btn" data-tab="organizer">Organizer Studio</button>
+            <button class="nav-btn" data-tab="gallery">My Ticket Gallery</button>
+            <button class="nav-btn" data-tab="scanner">Gate Scanner</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <!-- Event Catalog Tab -->
+        <section id="catalog-tab" class="tab-content active">
+            <div class="section-header">
+                <h2>Upcoming Occasions</h2>
+                <div class="filter-group">
+                    <label for="category-filter">Category:</label>
+                    <select id="category-filter">
+                        <option value="all">All Occasions</option>
+                        <option value="concert">Concert</option>
+                        <option value="show">Show</option>
+                        <option value="cinema">Cinema</option>
+                        <option value="exhibition">Exhibition</option>
+                        <option value="others">Others</option>
+                    </select>
+                </div>
+            </div>
+            <div id="event-grid" class="grid-container">
+                <!-- Event cards populated dynamically -->
+            </div>
+        </section>
+
+        <!-- Organizer Studio Tab -->
+        <section id="organizer-tab" class="tab-content">
+            <div class="card-form">
+                <h2>Create New Event Occasion</h2>
+                <form id="create-event-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event-title">Event Title</label>
+                            <input type="text" id="event-title" required placeholder="e.g. World Symphony Tour">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-category">Occasion Type</label>
+                            <select id="event-category" required>
+                                <option value="concert">Concert</option>
+                                <option value="show">Show</option>
+                                <option value="cinema">Cinema</option>
+                                <option value="exhibition">Exhibition</option>
+                                <option value="others">Others</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event-location">Venue / Location</label>
+                            <input type="text" id="event-location" required placeholder="e.g. Royal Hall">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-date">Date</label>
+                            <input type="date" id="event-date" required>
+                        </div>
+                    </div>
+
+                    <div class="tiers-container">
+                        <h3>Ticket Tiers & Limited Quotas</h3>
+                        <div id="tier-rows">
+                            <div class="tier-row">
+                                <input type="text" class="tier-name" placeholder="Tier Name (e.g. VIP)" required>
+                                <input type="number" class="tier-price" placeholder="Price ($)" min="0" required>
+                                <input type="number" class="tier-quota" placeholder="Limited Quota" min="1" required>
+                                <button type="button" class="btn-remove-tier" onclick="removeTierRow(this)">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-secondary" onclick="addTierRow()">+ Add Tier</button>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Publish Event to Fabric Ledger</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- My Ticket Gallery Tab -->
+        <section id="gallery-tab" class="tab-content">
+            <div class="gallery-controls card-form">
+                <h2>Access Your Ticket Gallery</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-contact-input">Registered Gmail or Phone Number</label>
+                        <input type="text" id="user-contact-input" placeholder="user@gmail.com or +1234567890">
+                    </div>
+                    <button type="button" class="btn-primary" onclick="loadUserTickets()">Load Collection</button>
+                </div>
+            </div>
+
+            <div id="ticket-gallery-grid" class="gallery-grid">
+                <p class="placeholder-text">Enter your Gmail address or phone number to view your issued tickets.</p>
+            </div>
+        </section>
+
+        <!-- Gate Scanner Tab -->
+        <section id="scanner-tab" class="tab-content">
+            <div class="scanner-grid">
+                <!-- Entry Scanner -->
+                <div class="scanner-card">
+                    <div class="card-header entry-header">
+                        <h2>Entry Gate Validator</h2>
+                        <span class="badge-tag">Single Use</span>
+                    </div>
+                    <form id="entry-scan-form">
+                        <div class="form-group">
+                            <label for="entry-ticket-id">Ticket ID</label>
+                            <input type="text" id="entry-ticket-id" required placeholder="TCK-1700000000000-123">
+                        </div>
+                        <div class="form-group">
+                            <label for="entry-hash-input">Scanned Entry QR Hash</label>
+                            <input type="text" id="entry-hash-input" required placeholder="ENTRY-TCK-XXXXX">
+                        </div>
+                        <button type="submit" class="btn-primary">Verify Entry Gate Pass</button>
+                    </form>
+                    <div id="entry-scan-result" class="scan-result-box"></div>
+                </div>
+
+                <!-- Exit Scanner -->
+                <div class="scanner-card">
+                    <div class="card-header exit-header">
+                        <h2>Exit Gate Validator</h2>
+                        <span class="badge-tag">Single Use</span>
+                    </div>
+                    <form id="exit-scan-form">
+                        <div class="form-group">
+                            <label for="exit-ticket-id">Ticket ID</label>
+                            <input type="text" id="exit-ticket-id" required placeholder="TCK-1700000000000-123">
+                        </div>
+                        <div class="form-group">
+                            <label for="exit-hash-input">Scanned Exit QR Hash</label>
+                            <input type="text" id="exit-hash-input" required placeholder="EXIT-TCK-XXXXX">
+                        </div>
+                        <button type="submit" class="btn-primary">Verify Exit Gate Pass</button>
+                    </form>
+                    <div id="exit-scan-result" class="scan-result-box"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Booking Modal -->
+    <div id="booking-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal('booking-modal')">&times;</span>
+            <h2 id="modal-event-title">Book Ticket</h2>
+            <form id="book-ticket-form">
+                <input type="hidden" id="book-event-id">
+                
+                <div class="form-group">
+                    <label for="book-tier-select">Select Ticket Tier</label>
+                    <select id="book-tier-select" required>
+                        <!-- Dynamic Tiers -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="book-user-contact">Your Gmail Address or Phone Number</label>
+                    <input type="text" id="book-user-contact" required placeholder="e.g. john@gmail.com or +19876543210">
+                    <small>Required to bind ownership of ticket on Fabric ledger.</small>
+                </div>
+
+                <button type="submit" class="btn-primary">Confirm Issue Ticket</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Ticket Detail Modal (QR View & Transfer) -->
+    <div id="ticket-modal" class="modal">
+        <div class="modal-content ticket-detail-content">
+            <span class="modal-close" onclick="closeModal('ticket-modal')">&times;</span>
+            <div id="ticket-detail-container">
+                <!-- Dynamically generated QR codes and ticket pass info -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
